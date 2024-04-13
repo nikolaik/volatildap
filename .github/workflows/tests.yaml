@@ -1,0 +1,29 @@
+name: Tests
+
+on:
+  push:
+   branches: [move-from-hdb-to-mdb-openldap-2.5]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install deps
+        run: |
+          sudo apt-get install -yqq slapd ldap-utils
+          apt-cache show slapd
+          pip install .[dev]
+
+      - name: Allow slapd to read config from /tmp
+        run: |
+          echo "/tmp/** rwk," | sudo tee -a /etc/apparmor.d/local/usr.sbin.slapd
+          sudo systemctl reload apparmor
+
+      - run: make test
